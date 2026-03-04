@@ -1,5 +1,6 @@
 Це UML діаграма для Mermaid
 
+<img width="6743" height="2456" alt="mermaid-diagram-2026-03-04-140903" src="https://github.com/user-attachments/assets/4c4884d8-0093-44fa-aed7-79e6f50a2d0c" />
 
 classDiagram
 
