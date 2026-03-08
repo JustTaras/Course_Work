@@ -1,60 +1,62 @@
-Це UML діаграма для Mermaid
-
-![alt text](558058014-4c4884d8-0093-44fa-aed7-79e6f50a2d0c.png)
-
-
+```mermaid
 classDiagram
 
 %% =========================
-%%        MODELS
+%%        MODELS (ENTITIES)
 %% =========================
 
 class User {
-    -int id
-    -string name
-    -string email
-    +getInfo() string
+    <<entity>>
+    - id : int
+    - name : string
+    - email : string
+    + getInfo() : string
 }
 
 class Student {
-    +viewAssignments() List~Assignment~
-    +submitAssignment(assignmentId, content)
+    <<entity>>
+    + viewAssignments() : List~Assignment~
+    + submitAssignment(assignmentId : int, content : string) : void
 }
 
 class Teacher {
-    +createAssignment(title, description, deadline, groupId)
-    +checkSubmission(submissionId)
-    +gradeSubmission(submissionId, grade)
+    <<entity>>
+    + createAssignment(title : string, description : string, deadline : DateTime, groupId : int) : Assignment
+    + checkSubmission(submissionId : int) : void
+    + gradeSubmission(submissionId : int, grade : int) : void
 }
 
 class Assignment {
-    -int id
-    -string title
-    -string description
-    -DateTime deadline
-    -int groupId
-    +isExpired() bool
-    +getInfo() string
+    <<entity>>
+    - id : int
+    - title : string
+    - description : string
+    - deadline : DateTime
+    - groupId : int
+    + isExpired() : bool
+    + getInfo() : string
 }
 
 class Submission {
-    -int id
-    -int assignmentId
-    -int studentId
-    -string content
-    -DateTime submitDate
-    -int grade
-    -string status
-    +setGrade(grade)
-    +changeStatus(status)
+    <<entity>>
+    - id : int
+    - assignmentId : int
+    - studentId : int
+    - content : string
+    - submitDate : DateTime
+    - grade : int
+    - status : string
+    + setGrade(grade : int) : void
+    + changeStatus(status : string) : void
 }
 
 class Group {
-    -int id
-    -string name
-    -List~Student~ students
-    +addStudent(student)
-    +removeStudent(student)
+    <<entity>>
+    - id : int
+    - name : string
+    - students : List~Student~
+    + addStudent(student : Student) : void
+    + removeStudent(student : Student) : void
 }
 
 %% =========================
@@ -63,37 +65,37 @@ class Group {
 
 class IUserRepository {
     <<interface>>
-    +addUser(user)
-    +getUserById(id) User
-    +getAllUsers() List~User~
+    + addUser(user : User) : void
+    + getUserById(id : int) : User
+    + getAllUsers() : List~User~
 }
 
 class IAssignmentRepository {
     <<interface>>
-    +addAssignment(assignment)
-    +getById(id) Assignment
-    +getAll() List~Assignment~
+    + addAssignment(assignment : Assignment) : void
+    + getById(id : int) : Assignment
+    + getAll() : List~Assignment~
 }
 
 class ISubmissionRepository {
     <<interface>>
-    +addSubmission(submission)
-    +getById(id) Submission
-    +getByAssignmentId(id) List~Submission~
+    + addSubmission(submission : Submission) : void
+    + getById(id : int) : Submission
+    + getByAssignmentId(id : int) : List~Submission~
 }
 
 class IGroupRepository {
     <<interface>>
-    +addGroup(group)
-    +getById(id) Group
-    +getAll() List~Group~
+    + addGroup(group : Group) : void
+    + getById(id : int) : Group
+    + getAll() : List~Group~
 }
 
 class InMemoryRepository {
-    -List~User~ users
-    -List~Assignment~ assignments
-    -List~Submission~ submissions
-    -List~Group~ groups
+    - users : List~User~
+    - assignments : List~Assignment~
+    - submissions : List~Submission~
+    - groups : List~Group~
 }
 
 %% =========================
@@ -102,19 +104,19 @@ class InMemoryRepository {
 
 class IUnitOfWork {
     <<interface>>
-    +IUserRepository Users
-    +IAssignmentRepository Assignments
-    +ISubmissionRepository Submissions
-    +IGroupRepository Groups
-    +commit()
+    + Users : IUserRepository
+    + Assignments : IAssignmentRepository
+    + Submissions : ISubmissionRepository
+    + Groups : IGroupRepository
+    + commit() : void
 }
 
 class UnitOfWork {
-    -IUserRepository userRepo
-    -IAssignmentRepository assignmentRepo
-    -ISubmissionRepository submissionRepo
-    -IGroupRepository groupRepo
-    +commit()
+    - userRepo : IUserRepository
+    - assignmentRepo : IAssignmentRepository
+    - submissionRepo : ISubmissionRepository
+    - groupRepo : IGroupRepository
+    + commit() : void
 }
 
 %% =========================
@@ -122,27 +124,30 @@ class UnitOfWork {
 %% =========================
 
 class AssignmentService {
-    -IUnitOfWork unitOfWork
-    +createAssignment(title, description, deadline, groupId)
-    +getAssignmentsByGroup(groupId)
-    +getActiveAssignments()
+    <<service>>
+    - unitOfWork : IUnitOfWork
+    + createAssignment(title : string, description : string, deadline : DateTime, groupId : int) : Assignment
+    + getAssignmentsByGroup(groupId : int) : List~Assignment~
+    + getActiveAssignments() : List~Assignment~
 }
 
 class SubmissionService {
-    -IUnitOfWork unitOfWork
-    +submit(assignmentId, studentId, content)
-    +check(submissionId)
-    +grade(submissionId, grade)
+    <<service>>
+    - unitOfWork : IUnitOfWork
+    + submit(assignmentId : int, studentId : int, content : string) : Submission
+    + check(submissionId : int) : void
+    + grade(submissionId : int, grade : int) : void
 }
 
 class GroupService {
-    -IUnitOfWork unitOfWork
-    +createGroup(name)
-    +addStudentToGroup(studentId, groupId)
+    <<service>>
+    - unitOfWork : IUnitOfWork
+    + createGroup(name : string) : Group
+    + addStudentToGroup(studentId : int, groupId : int) : void
 }
 
 %% =========================
-%%     RELATIONSHIPS + MULTIPLICITY
+%%     RELATIONSHIPS
 %% =========================
 
 User <|-- Student
@@ -164,3 +169,4 @@ ISubmissionRepository <|.. InMemoryRepository
 IGroupRepository <|.. InMemoryRepository
 
 IUnitOfWork <|.. UnitOfWork
+```
