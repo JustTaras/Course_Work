@@ -8,6 +8,7 @@ using HomeworkTracker.Services;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.Services.AddSingleton<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<AssignmentService>();
+builder.Services.AddScoped<SubmissionService>();
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 

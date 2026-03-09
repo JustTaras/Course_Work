@@ -9,6 +9,8 @@ public interface IAssignmentRepository {
 public interface ISubmissionRepository {
     void Add(Submission item);
     void Update(Submission item);
+    Submission? GetById(int id);
+    IEnumerable<Submission> GetByAssignment(int assignmentId);
 }
 
 public interface IUnitOfWork {

@@ -1,7 +1,8 @@
 ﻿@page "/"
-@using HomeworkTracker.Services
 @using HomeworkTracker.Models
+@using HomeworkTracker.Services
 @inject AssignmentService Service
+@inject SubmissionService SubService
 
 <PageTitle>Трекер домашніх завдань</PageTitle>
 
@@ -24,21 +25,41 @@
         else
         {
             @foreach (var item in Service.GetList())
-            {
-                <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm mb-2 rounded">
-                    <div>
-                        <strong class="text-primary">@item.Title</strong>
-                        <div class="text-muted" style="font-size: 0.8rem;">Дедлайн: @item.Deadline.ToShortDateString()</div>
-                    </div>
-                    <span class="badge bg-warning text-dark">Активне</span>
-                </div>
-            }
+{
+    <div class="list-group-item shadow-sm mb-3 rounded">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <strong class="text-primary" style="font-size: 1.2rem;">@item.Title</strong>
+                <div class="text-muted" style="font-size: 0.8rem;">Дедлайн: @item.Deadline.ToShortDateString()</div>
+            </div>
+            <span class="badge bg-warning text-dark">Активне</span>
+        </div>
+
+        <div class="mt-3 p-2 bg-light rounded">
+            <label class="form-label small fw-bold">Здати відповідь:</label>
+            <div class="input-group input-group-sm">
+                <input @bind="studentAnswers[item.Id]" class="form-control" placeholder="Введіть текст або посилання..." />
+                <button class="btn btn-primary" @onclick="() => SendWork(item.Id)">Відправити</button>
+            </div>
+        </div>
+    </div>
+}
         }
     </div>
 </div>
 
 @code {
     private string taskName = "";
+    private Dictionary<int, string> studentAnswers = new();
+
+    protected override void OnInitialized()
+    {
+        foreach (var item in Service.GetList())
+        {
+            if (!studentAnswers.ContainsKey(item.Id))
+                studentAnswers[item.Id] = "";
+        }
+    }
 
     private void Add()
     {
@@ -46,6 +67,22 @@
         {
             Service.Create(taskName);
             taskName = "";
+            
+            var last = Service.GetList().LastOrDefault();
+            if (last != null && !studentAnswers.ContainsKey(last.Id))
+                studentAnswers[last.Id] = "";
+        }
+    }
+
+    private void SendWork(int assignmentId)
+    {
+        if (studentAnswers.ContainsKey(assignmentId) && !string.IsNullOrWhiteSpace(studentAnswers[assignmentId]))
+        {
+            SubService.SubmitWork(assignmentId, "Студент", studentAnswers[assignmentId]);
+            
+            studentAnswers[assignmentId] = "";
+            
+            Console.WriteLine($"Завдання {assignmentId} відправлено!");
         }
     }
 }

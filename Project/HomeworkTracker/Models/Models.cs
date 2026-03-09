@@ -14,9 +14,11 @@ public class Assignment {
     public DateTime Deadline { get; set; }
 }
 
-public class Submission {
+public class Submission 
+{
     public int Id { get; set; }
     public int AssignmentId { get; set; }
-    public string Content { get; set; } = string.Empty;
+    public string Content { get; set; } = "";
     public int? Grade { get; set; }
+    public string Status { get; set; } = "На перевірці";
 }

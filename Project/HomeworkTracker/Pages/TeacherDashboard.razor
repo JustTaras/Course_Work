@@ -1,0 +1,84 @@
+@page "/teacher"
+@using HomeworkTracker.Models
+@using HomeworkTracker.Services
+@inject AssignmentService Service
+@inject SubmissionService SubService
+
+<div class="container mt-4">
+    <h3 class="mb-4">👨‍🏫 Панель перевірки робіт</h3>
+
+    @if (!SubService.GetAllSubmissions().Any())
+    {
+        <div class="alert alert-secondary">Студенти ще не здали жодної роботи.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover shadow-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID ДЗ</th>
+                        <th>Відповідь студента</th>
+                        <th>Статус</th>
+                        <th>Оцінка</th>
+                        <th>Дія</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var sub in SubService.GetAllSubmissions())
+                    {
+                        <tr>
+                            <td>@sub.AssignmentId</td>
+                            <td>@sub.Content</td>
+                            <td><span class="badge bg-info text-dark">@sub.Status</span></td>
+                            <td>
+                                @if (sub.Grade.HasValue)
+                                {
+                                    <span class="fw-bold text-success">@sub.Grade</span>
+                                }
+                                else
+                                {
+                                    <input type="number" class="form-control form-control-sm" style="width: 70px;" 
+                                           @bind="tempGrades[sub.Id]" />
+                                }
+                            </td>
+                            <td>
+                                @if (!sub.Grade.HasValue)
+                                {
+                                    <button class="btn btn-sm btn-primary" @onclick="() => SaveGrade(sub.Id)">
+                                        Оцінити
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Готово</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private Dictionary<int, int> tempGrades = new();
+
+    protected override void OnInitialized()
+    {
+        foreach (var sub in SubService.GetAllSubmissions())
+        {
+            if (!sub.Grade.HasValue && !tempGrades.ContainsKey(sub.Id))
+                tempGrades[sub.Id] = 0;
+        }
+    }
+
+    private void SaveGrade(int subId)
+    {
+        if (tempGrades.ContainsKey(subId))
+        {
+            SubService.GradeWork(subId, tempGrades[subId]);
+        }
+    }
+}
