@@ -1,6 +1,13 @@
 using HomeworkTracker.Components;
+using HomeworkTracker.Services;
+using HomeworkTracker.Repositories;
+using HomeworkTracker.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton<IUnitOfWork, UnitOfWork>();
+
+builder.Services.AddScoped<AssignmentService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
