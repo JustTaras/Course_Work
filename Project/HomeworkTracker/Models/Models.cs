@@ -12,6 +12,7 @@ public class Assignment {
     public int Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public DateTime Deadline { get; set; }
+    public string GroupName { get; set; } = string.Empty;
 }
 
 public class Submission 
