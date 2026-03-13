@@ -11,6 +11,7 @@ public interface ISubmissionRepository {
     void Update(Submission item);
     Submission? GetById(int id);
     IEnumerable<Submission> GetByAssignment(int assignmentId);
+    IEnumerable<Submission> GetAll();
 }
 
 public interface IUnitOfWork {

@@ -1,84 +1,136 @@
 @page "/teacher"
 @using HomeworkTracker.Models
 @using HomeworkTracker.Services
-@inject AssignmentService Service
 @inject SubmissionService SubService
+@inject AssignmentService AssignService
 
 <div class="container mt-4">
-    <h3 class="mb-4">👨‍🏫 Панель перевірки робіт</h3>
+    <h2 class="mb-4">Кабінет Викладача</h2>
 
-    @if (!SubService.GetAllSubmissions().Any())
+    <div class="card mb-5 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Створити нове завдання</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">Назва завдання:</label>
+                    <input type="text" class="form-control" @bind="newTitle" placeholder="Наприклад: Лабораторна №1" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">Для якої групи:</label>
+                    <select class="form-select" @bind="newGroup">
+                        <option value="">-- Оберіть групу --</option>
+                        <option value="ІПЗ-3/1">ІПЗ-3/1</option>
+                        <option value="ІПЗ-3/2">ІПЗ-3/2</option>
+                        <option value="КН-2/1">КН-2/1</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label fw-bold">Опис завдання:</label>
+                <textarea class="form-control" @bind="newDescription" rows="3" placeholder="Опишіть, що саме потрібно зробити..."></textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label class="form-label fw-bold">Дедлайн:</label>
+                <input type="date" class="form-control w-25" @bind="newDeadline" />
+            </div>
+            
+            <button class="btn btn-success" @onclick="CreateAssignment">Додати завдання</button>
+            
+            @if (showSuccessMessage)
+            {
+                <span class="text-success ms-3 fw-bold">Завдання успішно додано для групи @newGroup!</span>
+            }
+        </div>
+    </div>
+
+    <h3 class="mt-5 border-bottom pb-2">Панель перевірки робіт</h3>
+
+@{
+    var submissions = SubService.GetSubmissions();
+}
+
+@if (!submissions.Any())
+{
+    <div class="alert alert-secondary">Студенти ще не здали жодної роботи.</div>
+}
+else
+{
+    @foreach (var sub in submissions)
     {
-        <div class="alert alert-secondary">Студенти ще не здали жодної роботи.</div>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table table-hover shadow-sm">
-                <thead class="table-dark">
-                    <tr>
-                        <th>ID ДЗ</th>
-                        <th>Відповідь студента</th>
-                        <th>Статус</th>
-                        <th>Оцінка</th>
-                        <th>Дія</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var sub in SubService.GetAllSubmissions())
+        <div class="card mb-3 shadow-sm border-info">
+            <div class="card-body">
+                <p class="mb-1"><b>Завдання ID:</b> @sub.AssignmentId</p>
+                <p class="mb-1"><b>Відповідь студента:</b> @sub.Content</p>
+                <p class="mb-2"><b>Статус:</b> 
+                    <span class="@(sub.Status == "Перевірено" ? "text-success fw-bold" : "text-warning fw-bold")">
+                        @sub.Status
+                    </span>
+                </p>
+
+                @if (sub.Status == "Перевірено")
+                {
+                    <h5 class="text-success mt-3">Оцінка: @sub.Grade</h5>
+                }
+                else
+                {
+                    @if (activeSubmissionId == sub.Id)
                     {
-                        <tr>
-                            <td>@sub.AssignmentId</td>
-                            <td>@sub.Content</td>
-                            <td><span class="badge bg-info text-dark">@sub.Status</span></td>
-                            <td>
-                                @if (sub.Grade.HasValue)
-                                {
-                                    <span class="fw-bold text-success">@sub.Grade</span>
-                                }
-                                else
-                                {
-                                    <input type="number" class="form-control form-control-sm" style="width: 70px;" 
-                                           @bind="tempGrades[sub.Id]" />
-                                }
-                            </td>
-                            <td>
-                                @if (!sub.Grade.HasValue)
-                                {
-                                    <button class="btn btn-sm btn-primary" @onclick="() => SaveGrade(sub.Id)">
-                                        Оцінити
-                                    </button>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">Готово</span>
-                                }
-                            </td>
-                        </tr>
+                        <div class="input-group w-50 mt-3">
+                            <input type="number" class="form-control" placeholder="Введіть оцінку" @bind="tempGrade" />
+                            <button class="btn btn-success" @onclick="() => SaveGrade(sub.Id)">Зберегти оцінку</button>
+                        </div>
                     }
-                </tbody>
-            </table>
+                    else
+                    {
+                        <button class="btn btn-primary btn-sm mt-2" @onclick="() => StartGrading(sub.Id)">Перевірити та оцінити</button>
+                    }
+                }
+            </div>
         </div>
     }
+}
+
 </div>
 
 @code {
-    private Dictionary<int, int> tempGrades = new();
+    private int? activeSubmissionId = null;
+    private int tempGrade;
 
-    protected override void OnInitialized()
+    private void StartGrading(int id)
     {
-        foreach (var sub in SubService.GetAllSubmissions())
-        {
-            if (!sub.Grade.HasValue && !tempGrades.ContainsKey(sub.Id))
-                tempGrades[sub.Id] = 0;
-        }
+        activeSubmissionId = id;
     }
 
-    private void SaveGrade(int subId)
+    private void SaveGrade(int id)
     {
-        if (tempGrades.ContainsKey(subId))
+        SubService.GradeSubmission(id, tempGrade);
+        activeSubmissionId = null;
+    }
+
+    private string newTitle = "";
+    private string newDescription = "";
+    private string newGroup = "";
+    private DateTime newDeadline = DateTime.Now.AddDays(7);
+    private bool showSuccessMessage = false;
+
+    private void CreateAssignment()
+    {
+        if (string.IsNullOrWhiteSpace(newTitle) || string.IsNullOrWhiteSpace(newGroup))
         {
-            SubService.GradeWork(subId, tempGrades[subId]);
+            return; 
         }
+
+        AssignService.Create(newTitle, newDescription, newGroup, newDeadline);
+        
+        showSuccessMessage = true;
+
+        newTitle = "";
+        newDescription = "";
+        newGroup = "";
+        newDeadline = DateTime.Now.AddDays(7);
     }
 }

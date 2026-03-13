@@ -1,88 +1,33 @@
 ﻿@page "/"
-@using HomeworkTracker.Models
-@using HomeworkTracker.Services
-@inject AssignmentService Service
-@inject SubmissionService SubService
+@inject NavigationManager NavManager
 
-<PageTitle>Трекер домашніх завдань</PageTitle>
+<div class="container text-center mt-5">
+    <h1 class="display-4 fw-bold">Homework Tracker</h1>
+    <p class="lead text-muted mb-5">Система управління студентськими роботами</p>
 
-<div class="container mt-4">
-    <h1 class="mb-4">📋 Трекер завдань</h1>
-
-    <div class="card p-3 shadow-sm mb-4">
-        <h5>Додати нове завдання</h5>
-        <div class="d-flex gap-2">
-            <input @bind="taskName" class="form-control" placeholder="Введіть назву ДЗ..." />
-            <button class="btn btn-success" @onclick="Add">Зберегти</button>
-        </div>
-    </div>
-
-    <div class="list-group">
-        @if (!Service.GetList().Any())
-        {
-            <div class="alert alert-info">Завдань поки немає. Створіть перше!</div>
-        }
-        else
-        {
-            @foreach (var item in Service.GetList())
-{
-    <div class="list-group-item shadow-sm mb-3 rounded">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <div>
-                <strong class="text-primary" style="font-size: 1.2rem;">@item.Title</strong>
-                <div class="text-muted" style="font-size: 0.8rem;">Дедлайн: @item.Deadline.ToShortDateString()</div>
-            </div>
-            <span class="badge bg-warning text-dark">Активне</span>
-        </div>
-
-        <div class="mt-3 p-2 bg-light rounded">
-            <label class="form-label small fw-bold">Здати відповідь:</label>
-            <div class="input-group input-group-sm">
-                <input @bind="studentAnswers[item.Id]" class="form-control" placeholder="Введіть текст або посилання..." />
-                <button class="btn btn-primary" @onclick="() => SendWork(item.Id)">Відправити</button>
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body py-5">
+                    <h2 class="card-title h4 mb-4">Для Студентів</h2>
+                    <p class="card-text text-muted mb-4">Переглядайте завдання для вашої групи та завантажуйте готові роботи на перевірку.</p>
+                    <button class="btn btn-success btn-lg w-100" @onclick='() => NavManager.NavigateTo("/student")'>
+                        Увійти як Студент
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-}
-        }
+
+        <div class="col-md-5">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body py-5">
+                    <h2 class="card-title h4 mb-4">Для Викладачів</h2>
+                    <p class="card-text text-muted mb-4">Керуйте завданнями для різних груп, перевіряйте роботи та виставляйте оцінки.</p>
+                    <button class="btn btn-primary btn-lg w-100" @onclick='() => NavManager.NavigateTo("/teacher")'>
+                        Увійти як Викладач
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-
-@code {
-    private string taskName = "";
-    private Dictionary<int, string> studentAnswers = new();
-
-    protected override void OnInitialized()
-    {
-        foreach (var item in Service.GetList())
-        {
-            if (!studentAnswers.ContainsKey(item.Id))
-                studentAnswers[item.Id] = "";
-        }
-    }
-
-    private void Add()
-    {
-        if (!string.IsNullOrWhiteSpace(taskName))
-        {
-            Service.Create(taskName);
-            taskName = "";
-            
-            var last = Service.GetList().LastOrDefault();
-            if (last != null && !studentAnswers.ContainsKey(last.Id))
-                studentAnswers[last.Id] = "";
-        }
-    }
-
-    private void SendWork(int assignmentId)
-    {
-        if (studentAnswers.ContainsKey(assignmentId) && !string.IsNullOrWhiteSpace(studentAnswers[assignmentId]))
-        {
-            SubService.SubmitWork(assignmentId, "Студент", studentAnswers[assignmentId]);
-            
-            studentAnswers[assignmentId] = "";
-            
-            Console.WriteLine($"Завдання {assignmentId} відправлено!");
-        }
-    }
-}

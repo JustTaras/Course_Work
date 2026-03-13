@@ -10,7 +10,10 @@ public class AssignmentRepo : IAssignmentRepository {
 
 public class SubmissionRepo : ISubmissionRepository {
     private readonly List<Submission> _data = new();
-
+    public IEnumerable<Submission> GetAll()
+{
+    return _data; 
+}
     public void Add(Submission item) {
         item.Id = _data.Count + 1;
         _data.Add(item);
@@ -27,7 +30,7 @@ public class SubmissionRepo : ISubmissionRepository {
     public Submission? GetById(int id) => _data.FirstOrDefault(s => s.Id == id);
 
     public IEnumerable<Submission> GetByAssignment(int assignmentId) {
-        if (assignmentId == 0) return _data; // Для вчителя повертаємо все
+        if (assignmentId == 0) return _data;
         return _data.Where(s => s.AssignmentId == assignmentId);
     }
 }
