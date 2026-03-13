@@ -25,5 +25,5 @@ public class SubmissionService {
     }
 
     public List<Submission> GetAllSubmissions() => 
-        _uow.Submissions.GetByAssignment(0).ToList(); // 0 як заглушка для всіх
+        _uow.Submissions.GetByAssignment(0).ToList();
 }
