@@ -1,20 +1,27 @@
-namespace HomeworkTracker.Services;
 using HomeworkTracker.Models;
-using HomeworkTracker.Interfaces;
+using HomeworkTracker.Data;
+using Microsoft.EntityFrameworkCore;
 
-public class AssignmentService {
-    private readonly IUnitOfWork _uow;
-    public AssignmentService(IUnitOfWork uow) => _uow = uow;
-
-public void Create(string title, string description, string groupName, DateTime deadline)
+namespace HomeworkTracker.Services
 {
-    _uow.Assignments.Add(new Assignment 
-    { 
-        Title = title, 
-        Description = description,
-        GroupName = groupName,
-        Deadline = deadline 
-    });
-}
-    public List<Assignment> GetList() => _uow.Assignments.GetAll().ToList();
+    public class AssignmentService
+    {
+        private readonly AppDbContext _context;
+
+        public AssignmentService(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        public List<Assignment> GetList()
+        {
+            return _context.Assignments.Include(a => a.Group).ToList();
+        }
+
+        public void AddAssignment(Assignment assignment)
+        {
+            _context.Assignments.Add(assignment);
+            _context.SaveChanges();
+        }
+    }
 }

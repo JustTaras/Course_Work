@@ -1,41 +1,34 @@
 using HomeworkTracker.Models;
-using HomeworkTracker.Interfaces;
+using HomeworkTracker.Data;
 
 namespace HomeworkTracker.Services
 {
     public class SubmissionService
     {
-        private readonly IUnitOfWork _uow;
+        private readonly AppDbContext _context;
 
-        public SubmissionService(IUnitOfWork uow)
+        public SubmissionService(AppDbContext context)
         {
-            _uow = uow;
+            _context = context;
         }
 
-        public void SubmitWork(int assignmentId, string studentName, string content)
-{
-    var submission = new Submission
-    {
-        AssignmentId = assignmentId,
-        Content = content,
-        Status = "Очікує перевірки"
-    };
-    _uow.Submissions.Add(submission);
-}
-public void GradeSubmission(int submissionId, int grade)
-{
-    var submission = GetSubmissions().FirstOrDefault(s => s.Id == submissionId);
-    
-    if (submission != null)
-    {
-        submission.Grade = grade;
-        submission.Status = "Перевірено";
-    }
-}
+        public List<Submission> GetList()
+        {
+            return _context.Submissions.ToList();
+        }
 
-        public List<Submission> GetSubmissions()
-{
-    return _uow.Submissions.GetAll().ToList();
-}
+        public void SubmitWork(int assignmentId, int studentId, string content)
+        {
+            var submission = new Submission
+            {
+                AssignmentId = assignmentId,
+                StudentId = studentId,
+                Content = content,
+                SubmissionDate = DateTime.Now,
+                Status = "Очікує перевірки"
+            };
+            _context.Submissions.Add(submission);
+            _context.SaveChanges();
+        }
     }
 }
