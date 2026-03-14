@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.EntityFrameworkCore;
 using HomeworkTracker;
+using HomeworkTracker.Data;
 using HomeworkTracker.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
