@@ -1,0 +1,33 @@
+﻿@page "/"
+@using HomeworkTracker.Services
+@inject UserState UserState
+@inject NavigationManager NavManager
+@rendermode InteractiveServer
+
+<PageTitle>Вхід у систему</PageTitle>
+
+<div class="text-center mt-5">
+    <h1>Вітаємо у Homework Tracker!</h1>
+    <p class="lead">Будь ласка, оберіть свою роль для входу в систему:</p>
+
+    <div class="d-flex justify-content-center gap-4 mt-4">
+        <button class="btn btn-outline-primary btn-lg" @onclick='() => LoginAs("Teacher")'>
+            Я Викладач
+        </button>
+        <button class="btn btn-outline-success btn-lg" @onclick='() => LoginAs("Student")'>
+            Я Студент
+        </button>
+    </div>
+</div>
+
+@code {
+    private void LoginAs(string role)
+    {
+        UserState.SetRole(role);
+        
+        if (role == "Teacher")
+            NavManager.NavigateTo("/teacher/dashboard");
+        else if (role == "Student")
+            NavManager.NavigateTo("/student/dashboard");
+    }
+}

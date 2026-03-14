@@ -1,0 +1,53 @@
+﻿@using HomeworkTracker.Services
+@inject UserState UserState
+@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">HomeworkTracker</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+        
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Вибір ролі
+            </NavLink>
+        </div>
+
+        @if (UserState.Role == "Teacher")
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="teacher/dashboard">
+                    <span class="bi bi-journal-plus" aria-hidden="true"></span> Панель Викладача
+                </NavLink>
+            </div>
+            }
+
+        @if (UserState.Role == "Student")
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="student/dashboard">
+                    <span class="bi bi-list-check" aria-hidden="true"></span> Мої завдання
+                </NavLink>
+            </div>
+        }
+
+    </nav>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        UserState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        UserState.OnChange -= StateHasChanged;
+    }
+}
