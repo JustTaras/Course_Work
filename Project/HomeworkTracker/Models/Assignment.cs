@@ -6,6 +6,7 @@ public class Assignment
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public DateTime Deadline { get; set; }
+    public int GradingScale { get; set; } = 100; // 5, 12 або 100
     
     // До якої групи належить
     public int GroupId { get; set; }
@@ -20,7 +21,7 @@ public class Assignment
 
     public bool IsExpired()
     {
-        return DateTime.Now > Deadline;
+        return DateTime.UtcNow > Deadline;
     }
 
     public string GetInfo()

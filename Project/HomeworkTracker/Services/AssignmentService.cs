@@ -12,7 +12,7 @@ public class AssignmentService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Assignment> CreateAssignment(string title, string description, DateTime deadline, int groupId, int teacherId)
+    public async Task<Assignment> CreateAssignment(string title, string description, DateTime deadline, int groupId, int teacherId, int gradingScale = 100)
     {
         var assignment = new Assignment
         {
@@ -20,7 +20,8 @@ public class AssignmentService
             Description = description,
             Deadline = deadline,
             GroupId = groupId,
-            TeacherId = teacherId
+            TeacherId = teacherId,
+            GradingScale = gradingScale
         };
 
         await _unitOfWork.Assignments.AddAssignmentAsync(assignment);
@@ -32,5 +33,11 @@ public class AssignmentService
     {
         var all = await _unitOfWork.Assignments.GetAllAsync();
         return all.Where(a => !a.IsExpired()).ToList();
+    }
+
+    public async Task DeleteAssignment(int assignmentId)
+    {
+        await _unitOfWork.Assignments.DeleteAssignmentAsync(assignmentId);
+        await _unitOfWork.CommitAsync();
     }
 }

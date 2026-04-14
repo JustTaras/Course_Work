@@ -29,6 +29,8 @@ public class UnitOfWork : IUnitOfWork
 public class UserRepository(AppDbContext context) : IUserRepository {
     public async Task AddUserAsync(User user) => await context.Users.AddAsync(user);
     public async Task<User?> GetUserByIdAsync(int id) => await context.Users.FindAsync(id);
+    public async Task<User?> GetUserByEmailAsync(string email) =>
+        await context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
     public async Task<List<User>> GetAllUsersAsync() => await context.Users.ToListAsync();
 }
 
@@ -36,6 +38,16 @@ public class AssignmentRepository(AppDbContext context) : IAssignmentRepository 
     public async Task AddAssignmentAsync(Assignment a) => await context.Assignments.AddAsync(a);
     public async Task<Assignment?> GetByIdAsync(int id) => await context.Assignments.FindAsync(id);
     public async Task<List<Assignment>> GetAllAsync() => await context.Assignments.Include(a => a.Group).ToListAsync();
+    public async Task<List<Assignment>> GetByGroupIdAsync(int groupId) =>
+        await context.Assignments
+            .Where(a => a.GroupId == groupId)
+            .Include(a => a.Group)
+            .ToListAsync();
+    public async Task DeleteAssignmentAsync(int id)
+    {
+        var a = await context.Assignments.FindAsync(id);
+        if (a != null) context.Assignments.Remove(a);
+    }
 }
 
 public class SubmissionRepository(AppDbContext context) : ISubmissionRepository {
@@ -43,10 +55,18 @@ public class SubmissionRepository(AppDbContext context) : ISubmissionRepository 
     public async Task<Submission?> GetByIdAsync(int id) => await context.Submissions.FindAsync(id);
     public async Task<List<Submission>> GetByAssignmentIdAsync(int id) => 
         await context.Submissions.Where(s => s.AssignmentId == id).Include(s => s.Student).ToListAsync();
+    public async Task<List<Submission>> GetByStudentIdAsync(int studentId) =>
+        await context.Submissions
+            .Where(s => s.StudentId == studentId)
+            .Include(s => s.Assignment)
+            .ToListAsync();
 }
 
 public class GroupRepository(AppDbContext context) : IGroupRepository {
     public async Task AddGroupAsync(Group g) => await context.Groups.AddAsync(g);
-    public async Task<Group?> GetByIdAsync(int id) => await context.Groups.Include(g => g.Students).FirstOrDefaultAsync(g => g.Id == id);
+    public async Task<Group?> GetByIdAsync(int id) => await context.Groups
+        .Include(g => g.Students)
+        .Include(g => g.Assignments)
+        .FirstOrDefaultAsync(g => g.Id == id);
     public async Task<List<Group>> GetAllAsync() => await context.Groups.ToListAsync();
 }

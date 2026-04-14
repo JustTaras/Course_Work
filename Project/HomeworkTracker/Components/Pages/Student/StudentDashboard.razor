@@ -4,48 +4,91 @@
 @using HomeworkTracker.Repositories
 @inject IUnitOfWork UnitOfWork
 @inject SubmissionService SubmissionService
-@rendermode InteractiveServer
+@inject UserState UserState
+@inject NavigationManager NavManager
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<PageTitle>Кабінет Студента</PageTitle>
 
 <div class="container mt-4">
-    <h2>Панель студента</h2>
+    <h2>Кабінет Студента</h2>
 
-    @if (currentStudent == null || availableAssignments == null)
-{
-    <p><em>Завантаження...</em></p>
-}
-else
+    @if (currentStudent == null)
     {
-        <div class="mb-4">
-            <h4>Вітаємо, @currentStudent.Name!</h4>
-            <p>Ваша група: <strong>@currentStudent.Group?.Name</strong></p>
-        </div>
+        <p><em>Завантаження...</em></p>
+    }
+    else
+    {
+        <p class="text-muted">
+            Студент: <strong>@currentStudent.Name</strong> &nbsp;|&nbsp;
+            Група: <strong>@(currentStudent.Group?.Name ?? "—")</strong>
+        </p>
 
-        <h4>Доступні завдання</h4>
-        <div class="row">
-            @foreach (var assignment in availableAssignments)
+        <div class="card p-4 shadow-sm mb-4">
+            <p class="mb-2">Всього завдань у базі: <strong>@totalAssignments</strong></p>
+
+            @if (!groupAssignments.Any())
             {
-                <div class="col-md-6 mb-3">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">@assignment.Title</h5>
-                            <p class="card-text">@assignment.Description</p>
-                            <p class="text-muted small">Дедлайн: @assignment.Deadline.ToShortDateString()</p>
-                            
-                            @if (HasSubmitted(assignment.Id))
-                            {
-                                <span class="badge bg-success">Відправлено</span>
-                            }
-                            else
-                            {
-                                <div class="mt-2">
-                                    <textarea class="form-control mb-2" placeholder="Ваша відповідь..." @bind="submissionContents[assignment.Id]"></textarea>
-                                    <button class="btn btn-primary btn-sm" @onclick="() => SubmitWork(assignment.Id)">
-                                        Надіслати роботу
-                                    </button>
+                <div class="alert alert-warning">
+                    Для вашої групи поки немає жодних завдань.
+                </div>
+            }
+            else
+            {
+                <div class="row">
+                    @foreach (var assignment in groupAssignments)
+                    {
+                        var sub = GetSubmission(assignment.Id);
+                        <div class="col-md-6 mb-3">
+                            <div class="card shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title">@assignment.Title</h5>
+                                    <p class="card-text">@assignment.Description</p>
+                                    <p class="text-muted small">
+                                        Дедлайн: @assignment.Deadline.ToShortDateString()
+                                        @if (assignment.IsExpired())
+                                        {
+                                            <span class="badge bg-danger ms-2">Завершено</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success ms-2">Активне</span>
+                                        }
+                                    </p>
+
+                                    @if (sub != null)
+                                    {
+                                        @if (sub.Grade.HasValue)
+                                        {
+                                            <div class="alert alert-success py-2 mb-0">
+                                                <strong>Оцінка: @sub.Grade / @(sub.Assignment?.GradingScale ?? 100) ✓</strong>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info text-dark">Відправлено на перевірку ✓</span>
+                                        }
+                                    }
+                                    else if (!assignment.IsExpired())
+                                    {
+                                        <div class="mt-2">
+                                            <textarea class="form-control mb-2" rows="2"
+                                                      placeholder="Ваша відповідь..."
+                                                      @bind="submissionContents[assignment.Id]"></textarea>
+                                            <button class="btn btn-primary btn-sm"
+                                                    @onclick="() => SubmitWork(assignment.Id)">
+                                                Надіслати роботу
+                                            </button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Дедлайн минув</span>
+                                    }
                                 </div>
-                            }
+                            </div>
                         </div>
-                    </div>
+                    }
                 </div>
             }
         </div>
@@ -54,61 +97,60 @@ else
 
 @code {
     private Student? currentStudent;
-    private List<Assignment> availableAssignments = new();
+    private List<Assignment> groupAssignments = new();
     private List<Submission> mySubmissions = new();
     private Dictionary<int, string> submissionContents = new();
+    private int totalAssignments;
 
     protected override async Task OnInitializedAsync()
     {
-        // 1. Отримуємо дані студента
-        var users = await UnitOfWork.Users.GetAllUsersAsync();
-        currentStudent = users.OfType<Student>().FirstOrDefault();
-
-        if (currentStudent != null)
+        if (UserState.Role != "Student")
         {
-            // 2. Отримуємо завдання групи
-            var group = await UnitOfWork.Groups.GetByIdAsync(currentStudent.GroupId ?? 0);
-            if (group != null)
-            {
-                availableAssignments = group.Assignments ?? new List<Assignment>();
-                
-                // 3. Ініціалізуємо ключі в словнику (КЛЮЧОВИЙ МОМЕНТ)
-                foreach (var a in availableAssignments)
-                {
-                    if (!submissionContents.ContainsKey(a.Id))
-                    {
-                        submissionContents[a.Id] = "";
-                    }
-                }
-            }
-
-            await LoadSubmissions();
+            NavManager.NavigateTo("/");
+            return;
         }
-    }
 
-    private async Task LoadSubmissions()
-    {
+        // Отримуємо поточного студента за ID з UserState
+        var user = await UnitOfWork.Users.GetUserByIdAsync(UserState.CurrentUserId);
+        currentStudent = user as Student;
+
         if (currentStudent == null) return;
+
+        // Завантажуємо групу студента
+        if (currentStudent.GroupId.HasValue)
+            currentStudent.Group = await UnitOfWork.Groups.GetByIdAsync(currentStudent.GroupId.Value);
+
+        // Загальна кількість завдань
         var allAssignments = await UnitOfWork.Assignments.GetAllAsync();
-        mySubmissions = allAssignments
-            .SelectMany(a => a.Submissions)
-            .Where(s => s.StudentId == currentStudent.Id)
-            .ToList();
+        totalAssignments = allAssignments.Count;
+
+        // Завдання для групи студента — завантажуємо напряму з БД
+        if (currentStudent.GroupId.HasValue)
+            groupAssignments = await UnitOfWork.Assignments.GetByGroupIdAsync(currentStudent.GroupId.Value);
+        else
+            groupAssignments = new List<Assignment>();
+
+        foreach (var a in groupAssignments)
+            submissionContents[a.Id] = "";
+
+        // Здачі цього студента
+        mySubmissions = await UnitOfWork.Submissions.GetByStudentIdAsync(currentStudent.Id);
     }
 
-    private bool HasSubmitted(int assignmentId) => 
-        mySubmissions.Any(s => s.AssignmentId == assignmentId);
+    private Submission? GetSubmission(int assignmentId) =>
+        mySubmissions.FirstOrDefault(s => s.AssignmentId == assignmentId);
 
     private async Task SubmitWork(int assignmentId)
     {
-        // Додаткова перевірка безпеки
-        if (currentStudent == null || !submissionContents.ContainsKey(assignmentId)) return;
-        
-        var content = submissionContents[assignmentId];
+        if (currentStudent == null) return;
+        if (!submissionContents.TryGetValue(assignmentId, out var content)) return;
         if (string.IsNullOrWhiteSpace(content)) return;
 
         await SubmissionService.Submit(assignmentId, currentStudent.Id, content);
-        await LoadSubmissions();
+
+        // Оновлюємо список здач зі свіжими даними
+        mySubmissions = await UnitOfWork.Submissions.GetByStudentIdAsync(currentStudent.Id);
+        submissionContents[assignmentId] = "";
         StateHasChanged();
     }
 }

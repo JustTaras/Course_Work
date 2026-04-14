@@ -3,101 +3,233 @@
 @using HomeworkTracker.Services
 @using HomeworkTracker.Repositories
 @inject AssignmentService AssignmentService
+@inject SubmissionService SubmissionService
 @inject IUnitOfWork UnitOfWork
-@rendermode InteractiveServer
+@inject UserState UserState
+@inject NavigationManager NavManager
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<PageTitle>Кабінет Викладача</PageTitle>
 
 <div class="container mt-4">
-    <h2>Панель викладача</h2>
+    <h2>Кабінет Викладача</h2>
+    <p class="text-muted">Викладач: <strong>@UserState.CurrentUserName</strong></p>
 
     <div class="card p-4 shadow-sm mb-4">
         <h4>Створити нове завдання</h4>
         <div class="row g-3">
             <div class="col-md-6">
-                <label>Назва завдання</label>
-                <input type="text" class="form-control" @bind="newAssignment.Title" />
+                <label class="form-label">Назва завдання:</label>
+                <input type="text" class="form-control" placeholder="Наприклад: Лабораторна №1"
+                       @bind="newAssignment.Title" />
             </div>
-            <div class="col-md-3">
-                <label>Група</label>
+            <div class="col-md-6">
+                <label class="form-label">Для якої групи:</label>
                 <select class="form-select" @bind="selectedGroupId">
-                    <option value="0">Оберіть групу...</option>
+                    <option value="0">-- Оберіть групу --</option>
                     @foreach (var g in groups)
                     {
                         <option value="@g.Id">@g.Name</option>
                     }
                 </select>
             </div>
-            <div class="col-md-3">
-                <label>Дедлайн</label>
+            <div class="col-12">
+                <label class="form-label">Опис завдання:</label>
+                <textarea class="form-control" rows="3"
+                          placeholder="Опишіть, що саме потрібно зробити..."
+                          @bind="newAssignment.Description"></textarea>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Дедлайн:</label>
                 <input type="date" class="form-control" @bind="newAssignment.Deadline" />
             </div>
-            <div class="col-12">
-                <label>Опис</label>
-                <textarea class="form-control" @bind="newAssignment.Description"></textarea>
+            <div class="col-md-4">
+                <label class="form-label">Шкала оцінювання:</label>
+                <select class="form-select" @bind="newAssignment.GradingScale">
+                    <option value="5">5-бальна</option>
+                    <option value="12">12-бальна</option>
+                    <option value="100" selected>100-бальна</option>
+                </select>
             </div>
             <div class="col-12">
-                <button class="btn btn-primary" @onclick="CreateTask">Опублікувати</button>
+                <button class="btn btn-primary" @onclick="CreateTask">Додати завдання</button>
             </div>
         </div>
     </div>
 
-    <h4>Активні завдання</h4>
-    <table class="table table-hover mt-3">
-        <thead class="table-dark">
-            <tr>
-                <th>Назва</th>
-                <th>Група</th>
-                <th>Дедлайн</th>
-                <th>Статус</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var task in assignments)
-            {
-                <tr>
-                    <td>@task.Title</td>
-                    <td>@task.Group?.Name</td>
-                    <td>@task.Deadline.ToShortDateString()</td>
-                    <td>
-                        @if (task.IsExpired()) { <span class="badge bg-danger">Завершено</span> }
-                        else { <span class="badge bg-success">Активне</span> }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="card p-4 shadow-sm mb-4">
+        <h4>Завдання</h4>
+        @if (!allAssignments.Any())
+        {
+            <p class="text-muted">Завдань ще немає.</p>
+        }
+        else
+        {
+            <table class="table table-sm table-hover mt-2">
+                <thead class="table-light">
+                    <tr>
+                        <th>Назва</th>
+                        <th>Група</th>
+                        <th>Дедлайн</th>
+                        <th>Шкала</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in allAssignments)
+                    {
+                        <tr>
+                            <td>@a.Title</td>
+                            <td>@a.Group?.Name</td>
+                            <td>@a.Deadline.ToShortDateString()</td>
+                            <td>@a.GradingScale-бальна</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => DeleteAssignment(a.Id)">
+                                    Видалити
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <div class="card p-4 shadow-sm">
+        <h4>Панель перевірки робіт</h4>
+        @if (!submissions.Any())
+        {
+            <p class="text-muted">Студенти ще не здали жодної роботи.</p>
+        }
+        else
+        {
+            <table class="table table-hover mt-2">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Студент</th>
+                        <th>Завдання</th>
+                        <th>Шкала</th>
+                        <th>Здано</th>
+                        <th>Статус</th>
+                        <th>Оцінка</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in submissions)
+                    {
+                        <tr>
+                            <td>@s.Student?.Name</td>
+                            <td>@s.Assignment?.Title</td>
+                            <td><span class="badge bg-secondary">@(s.Assignment?.GradingScale ?? 100)-бальна</span></td>
+                            <td>@s.SubmitDate.ToShortDateString()</td>
+                            <td>
+                                @if (s.Grade.HasValue)
+                                {
+                                    <span class="badge bg-success">Перевірено</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">Очікує перевірки</span>
+                                }
+                            </td>
+                            <td>
+                                @if (s.Grade.HasValue)
+                                {
+                                    <span class="fw-bold text-success">@s.Grade / @(s.Assignment?.GradingScale ?? 100)</span>
+                                }
+                                else
+                                {
+                                    <input type="number" class="form-control form-control-sm" style="width:80px"
+                                           min="1" max="@(s.Assignment?.GradingScale ?? 100)"
+                                           @bind="gradeInputs[s.Id]" />
+                                }
+                            </td>
+                            <td>
+                                @if (!s.Grade.HasValue)
+                                {
+                                    <button class="btn btn-sm btn-primary"
+                                            @onclick="() => GradeSubmission(s.Id)">
+                                        Виставити
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
 </div>
 
 @code {
-    private List<Assignment> assignments = new();
     private List<Group> groups = new();
-    private Assignment newAssignment = new Assignment { Deadline = DateTime.Now.AddDays(7) };
+    private List<Assignment> allAssignments = new();
+    private List<Submission> submissions = new();
+    private Assignment newAssignment = new() { Deadline = DateTime.UtcNow.AddDays(7) };
     private int selectedGroupId;
+    private Dictionary<int, int> gradeInputs = new();
 
     protected override async Task OnInitializedAsync()
     {
+        if (UserState.Role != "Teacher")
+        {
+            NavManager.NavigateTo("/");
+            return;
+        }
+
         groups = await UnitOfWork.Groups.GetAllAsync();
-        assignments = await AssignmentService.GetActiveAssignments();
+        await LoadSubmissions();
+    }
+
+    private async Task LoadSubmissions()
+    {
+        allAssignments = await UnitOfWork.Assignments.GetAllAsync();
+        submissions = new List<Submission>();
+        foreach (var a in allAssignments)
+        {
+            var subs = await UnitOfWork.Submissions.GetByAssignmentIdAsync(a.Id);
+            foreach (var s in subs)
+            {
+                s.Assignment = a;
+                submissions.Add(s);
+            }
+        }
+        foreach (var s in submissions.Where(s => !s.Grade.HasValue))
+            gradeInputs.TryAdd(s.Id, 0);
     }
 
     private async Task CreateTask()
     {
-        if (selectedGroupId == 0 || string.IsNullOrEmpty(newAssignment.Title)) return;
+        if (selectedGroupId == 0 || string.IsNullOrWhiteSpace(newAssignment.Title)) return;
 
-        // В реальній системі ми б брали ID з авторизації, зараз беремо першого викладача
-        var teacher = (await UnitOfWork.Users.GetAllUsersAsync()).OfType<Teacher>().FirstOrDefault();
-        
-        if (teacher != null)
-        {
-            await AssignmentService.CreateAssignment(
-                newAssignment.Title, 
-                newAssignment.Description, 
-                newAssignment.Deadline, 
-                selectedGroupId, 
-                teacher.Id);
-            
-            // Очищення та оновлення
-            newAssignment = new Assignment { Deadline = DateTime.Now.AddDays(7) };
-            assignments = await AssignmentService.GetActiveAssignments();
-        }
+        await AssignmentService.CreateAssignment(
+            newAssignment.Title,
+            newAssignment.Description,
+            DateTime.SpecifyKind(newAssignment.Deadline, DateTimeKind.Utc),
+            selectedGroupId,
+            UserState.CurrentUserId,
+            newAssignment.GradingScale);
+
+        newAssignment = new Assignment { Deadline = DateTime.UtcNow.AddDays(7) };
+        selectedGroupId = 0;
+        await LoadSubmissions();
+    }
+
+    private async Task GradeSubmission(int submissionId)
+    {
+        if (!gradeInputs.TryGetValue(submissionId, out var grade)) return;
+        var sub = submissions.FirstOrDefault(s => s.Id == submissionId);
+        int maxGrade = sub?.Assignment?.GradingScale ?? 100;
+        if (grade < 1 || grade > maxGrade) return;
+        await SubmissionService.Grade(submissionId, grade);
+        await LoadSubmissions();
+    }
+
+    private async Task DeleteAssignment(int assignmentId)
+    {
+        await AssignmentService.DeleteAssignment(assignmentId);
+        await LoadSubmissions();
     }
 }

@@ -13,7 +13,7 @@ public class Submission
     public Student? Student { get; set; }
 
     public string Content { get; set; } = string.Empty;
-    public DateTime SubmitDate { get; set; } = DateTime.Now;
+    public DateTime SubmitDate { get; set; } = DateTime.UtcNow;
     
     public int? Grade { get; set; } // Nullable, бо спочатку оцінки немає
     public string Status { get; set; } = "Submitted"; // Submitted, Checked, Graded

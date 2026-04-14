@@ -1,33 +1,94 @@
 ﻿@page "/"
+@using HomeworkTracker.Models
 @using HomeworkTracker.Services
+@using HomeworkTracker.Repositories
 @inject UserState UserState
+@inject IUnitOfWork UnitOfWork
 @inject NavigationManager NavManager
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
-<PageTitle>Вхід у систему</PageTitle>
+<PageTitle>Homework Tracker — Вхід</PageTitle>
 
-<div class="text-center mt-5">
-    <h1>Вітаємо у Homework Tracker!</h1>
-    <p class="lead">Будь ласка, оберіть свою роль для входу в систему:</p>
+<div class="d-flex justify-content-center align-items-center" style="min-height:100vh; background:#f8f9fa;">
+    <div class="card shadow p-4" style="width:100%; max-width:400px;">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold mb-1">Homework Tracker</h2>
+            <p class="text-muted small mb-0">Введіть корпоративну пошту та пароль</p>
+        </div>
 
-    <div class="d-flex justify-content-center gap-4 mt-4">
-        <button class="btn btn-outline-primary btn-lg" @onclick='() => LoginAs("Teacher")'>
-            Я Викладач
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" placeholder="example@college.ua"
+                   @bind="email" @bind:event="oninput" @onkeydown="OnKeyDown" />
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label">Пароль</label>
+            <input type="password" class="form-control" placeholder="••••••••"
+                   @bind="password" @bind:event="oninput" @onkeydown="OnKeyDown" />
+        </div>
+
+        @if (errorMessage != null)
+        {
+            <div class="alert alert-danger py-2 small mb-3">@errorMessage</div>
+        }
+
+        <button class="btn btn-primary w-100" @onclick="HandleLogin" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+            }
+            Увійти
         </button>
-        <button class="btn btn-outline-success btn-lg" @onclick='() => LoginAs("Student")'>
-            Я Студент
-        </button>
+
+        <hr class="my-4" />
+        <div class="text-muted" style="font-size:0.78rem;">
+            <p class="mb-1 fw-semibold">Демо-акаунти:</p>
+            <p class="mb-1">Викладачі: <code>petrovych@college.ua</code> / <code>teacher123</code></p>
+            <p class="mb-0">Студенти: <code>ivan@student.ua</code> / <code>student123</code></p>
+        </div>
     </div>
 </div>
 
 @code {
-    private void LoginAs(string role)
+    private string email = "";
+    private string password = "";
+    private string? errorMessage;
+    private bool isLoading;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
     {
-        UserState.SetRole(role);
-        
-        if (role == "Teacher")
-            NavManager.NavigateTo("/teacher/dashboard");
-        else if (role == "Student")
-            NavManager.NavigateTo("/student/dashboard");
+        if (e.Key == "Enter") await HandleLogin();
+    }
+
+    private async Task HandleLogin()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "Введіть email та пароль.";
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            var user = await UnitOfWork.Users.GetUserByEmailAsync(email.Trim().ToLower());
+
+            if (user == null || !PasswordHelper.Verify(password, user.PasswordHash))
+            {
+                errorMessage = "Неправильна пошта або пароль.";
+                return;
+            }
+
+            string role = user is HomeworkTracker.Models.Teacher ? "Teacher" : "Student";
+            UserState.Login(role, user.Id, user.Name);
+            NavManager.NavigateTo(role == "Teacher" ? "/teacher/dashboard" : "/student/dashboard");
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 }
